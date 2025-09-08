@@ -9,7 +9,7 @@ struct cleanme2App: App {
     
     init() {
         let idfa = ASIdentifierManager.shared().advertisingIdentifier.uuidString
-        Apphud.start(apiKey: "API_KEY_HERE") // todo API_KEY_HERE for appHud
+        Apphud.start(apiKey: "API_KEY_HERE") //  todo API_KEY_HERE for appHud
         Apphud.setDeviceIdentifiers(idfa: nil, idfv: idfa)
         
         print("Apphud initialized with IDFA: \(idfa)")
