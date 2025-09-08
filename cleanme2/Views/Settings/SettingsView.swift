@@ -25,7 +25,7 @@ struct SettingsView: View {
                 
 //                generalSection // todo - не нужна секция с паролем на все апп ? !
                 
-                dataManagementSection
+//                dataManagementSection // todo вернуть
                 
                 secretSpaceSection
                 

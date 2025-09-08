@@ -16,7 +16,7 @@ struct PaywallView: View {
 
     init(isPresented: Binding<Bool>) {
         self._isPresented = isPresented
-        self._viewModel = StateObject(wrappedValue: PaywallViewModel(isPresented: isPresented))
+        self._viewModel = StateObject(wrappedValue: PaywallViewModel(isPresented: isPresented)) // todo как передать то?
     }
 
     var body: some View {
@@ -65,7 +65,7 @@ struct PaywallView: View {
                 
                 // Кнопка "Continue"
                 PaywallContinueButton(action: {
-//                    viewModel.continueTapped()
+//                    viewModel.continueTapped() // todo вернуть
                 })
                 .padding(.horizontal, 20)
                 
@@ -185,7 +185,7 @@ struct PaywallBottomLinksView: View {
     var body: some View {
         HStack(spacing: 15) {
             Button("Privacy Policy") {
-//                viewModel.pr()
+//                viewModel.pr() // todo вернуть
             }
             
             Button("Restore") {
@@ -193,7 +193,7 @@ struct PaywallBottomLinksView: View {
             }
             
             Button("Terms of Use") {
-//                viewModel.termsOfUseTapped()
+//                viewModel.termsOfUseTapped() // todo вернуть
             }
             
             Button("Skip") {
