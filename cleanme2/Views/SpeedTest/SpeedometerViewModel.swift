@@ -222,7 +222,7 @@ final class SpeedometerViewModel: ObservableObject {
                 } else {
                     self?.logger.info("🔴 Test finished")
                     if self?.testPhase != .error("") {
-                        self?.testPhase = .completed
+                        self?.testPhase = .idle
                         self?.look = .finishing
                         // Save final results
                         self?.finalDownloadSpeed = self?.downloadSpeed ?? 0
