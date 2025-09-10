@@ -42,7 +42,7 @@ struct ScanView: View {
             VStack(spacing: 24 * scalingFactor) {
                 VStack(alignment: .leading, spacing: 20) {
                     VStack {
-                        Text("CleanMe")
+                        Text("SnapCleaner")
                             .font(.system(size: 22, weight: .bold))
                             .foregroundStyle(CMColor.primaryText)
 

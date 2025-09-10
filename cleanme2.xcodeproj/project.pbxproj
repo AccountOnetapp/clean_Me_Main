@@ -282,7 +282,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = cleanme2/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = CleanMe;
+				INFOPLIST_KEY_CFBundleDisplayName = SnapCleaner;
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "This app needs access to your calendar to help you clean up and organize your events. Your calendar data stays private and secure.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "This app needs access to your contacts to safely store selected contacts in encrypted storage.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "CleanMe uses Face ID to securely authenticate access to protected folders and sensitive features.";
@@ -331,7 +331,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = cleanme2/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = CleanMe;
+				INFOPLIST_KEY_CFBundleDisplayName = SnapCleaner;
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "This app needs access to your calendar to help you clean up and organize your events. Your calendar data stays private and secure.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "This app needs access to your contacts to safely store selected contacts in encrypted storage.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "CleanMe uses Face ID to securely authenticate access to protected folders and sensitive features.";
