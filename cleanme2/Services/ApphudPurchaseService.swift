@@ -2,141 +2,114 @@ import StoreKit
 import ApphudSDK
 import Combine
 
-enum PurchaseServiceProduct: String {
-    case week = "test.cleanme.week" // todo - use real
-    case month = "" //  - не используем в текущем релизе никак
+// MARK: - App Constants and Types
+
+/// Defines the supported subscription product types.
+enum PurchaseServiceProduct: String, CaseIterable {
+    case week = "test.cleanme.week" // TODO: use real
+    case month = "" // Not used in this release
 }
 
+/// Defines the outcome of a purchase or restore operation.
 enum PurchaseServiceResult {
     case success
     case failure(Error?)
 }
 
-// MARK: - SKProduct Extension for Localization
+/// Custom errors for the purchase flow.
+enum PurchaseError: Error {
+    case cancelled
+    case noProductsFound
+    case productNotFound(String)
+    case purchaseFailed
+    case noActiveSubscription
+}
+
+// MARK: - SKProduct Extension: Price and Currency Helpers
+
 public extension SKProduct {
+    /// The localized price string for the product.
     var localizedPrice: String? {
-        // Updated to use a helper method for clarity
-        return PriceFormatter.formatter(for: Locale.current).string(from: price)
+        return PriceFormatter.formatter.string(from: price)
     }
-    
+
+    /// The currency symbol for the product.
     var currency: String {
-        return PriceFormatter.formatter(for: Locale.current).currencySymbol
+        return PriceFormatter.formatter.currencySymbol
     }
 
     private struct PriceFormatter {
-        static func formatter(for locale: Locale) -> NumberFormatter {
+        static let formatter: NumberFormatter = {
             let formatter = NumberFormatter()
-            formatter.locale = locale
+            formatter.locale = Locale.current
             formatter.numberStyle = .currency
             return formatter
-        }
+        }()
     }
 }
 
-// MARK: - ApphudPurchaseService: Manages all Apphud-related transactions
+// MARK: - ApphudPurchaseService: Manages all Apphud transactions
+
 final class ApphudPurchaseService {
     
-    // Custom errors for purchase flow
-    enum PurchaseError: Error {
-        case cancelled
-        case noProductsFound
-        case productNotFound(String)
-        case purchaseFailed
-        case noActiveSubscription
-    }
-    
-    // Typealias for clarity in method signatures
+    // Typealias for method signature clarity.
     typealias PurchaseCompletion = (PurchaseServiceResult) -> Void
     
     // MARK: - Properties
     
-    // Store fetched Apphud products
+    // Store fetched Apphud products.
     private var availableProducts: [ApphudProduct] = []
 
-    // Public property to check subscription status
+    /// Checks if the user has an active subscription.
     var hasActiveSubscription: Bool {
         Apphud.hasActiveSubscription()
     }
     
     // MARK: - Initialization
     
-    // Init is now async to handle product fetching
     init() {
         Task {
             await fetchProducts()
         }
     }
     
-    // MARK: - Public Methods
-    
+    // MARK: - Public API
+
     /// Purchases a subscription plan.
     @MainActor
     func purchase(plan: SubscriptionPlan, completion: @escaping PurchaseCompletion) {
-        let identifier: String
-        switch plan {
-        case .monthly:
-            identifier = PurchaseServiceProduct.month.rawValue
-        case .weekly:
-            identifier = PurchaseServiceProduct.week.rawValue
-        }
-        
-        guard let product = availableProducts.first(where: { $0.productId == identifier }) else {
-            completion(.failure(PurchaseError.productNotFound(identifier)))
+        guard let productId = getProductId(for: plan) else {
+            completion(.failure(PurchaseError.noProductsFound))
             return
         }
 
-        Apphud.purchase(product) { result in
-            if let error = result.error {
-                print("Apphud: Purchase failed with error: \(error.localizedDescription)")
-                completion(.failure(error))
-                return
-            }
+        guard let product = getProduct(with: productId) else {
+            completion(.failure(PurchaseError.productNotFound(productId)))
+            return
+        }
 
-            if let subscription = result.subscription, subscription.isActive() {
-                print("Apphud: Purchase success - subscription is active.")
-                completion(.success)
-            } else if result.nonRenewingPurchase != nil {
-                print("Apphud: Purchase success - non-renewing purchase.")
-                completion(.success)
-            } else {
-                print("Apphud: Purchase failed - unknown reason.")
-                completion(.failure(PurchaseError.purchaseFailed))
-            }
+        Apphud.purchase(product) { [weak self] result in
+            self?.handlePurchaseResult(result, completion: completion)
         }
     }
     
     /// Restores all purchases for the user.
     @MainActor
     func restore(completion: @escaping PurchaseCompletion) {
-        Apphud.restorePurchases { subscriptions, nonRenewingPurchases, error in
-            if let restoreError = error {
-                completion(.failure(restoreError))
-                return
-            }
-            
-            if subscriptions?.first(where: { $0.isActive() }) != nil {
-                print("Apphud: Restore successful - active subscription found.")
-                completion(.success)
-            } else {
-                print("Apphud: Restore completed, but no active subscription found.")
-                completion(.failure(PurchaseError.noActiveSubscription))
-            }
+        Apphud.restorePurchases { [weak self] subscriptions, nonRenewingPurchases, error in
+            self?.handleRestoreResult(subscriptions: subscriptions, error: error, completion: completion)
         }
     }
     
     /// Returns the numerical price for a given product.
     func price(for product: PurchaseServiceProduct) -> Double? {
-        guard let apphudProduct = availableProducts.first(where: { $0.productId == product.rawValue }),
-              let skProduct = apphudProduct.skProduct else {
-            return nil
-        }
+        guard let skProduct = getSKProduct(for: product) else { return nil }
         return skProduct.price.doubleValue
     }
     
     /// Returns the localized price string for a given product.
     func localizedPrice(for product: PurchaseServiceProduct) -> String? {
-        guard let apphudProduct = availableProducts.first(where: { $0.productId == product.rawValue }),
-              let skProduct = apphudProduct.skProduct else {
+        guard let skProduct = getSKProduct(for: product) else {
             // Fallback for when Apphud products are not available
             return product == .month ? "$18.99" : "$6.99"
         }
@@ -145,33 +118,74 @@ final class ApphudPurchaseService {
     
     /// Returns the currency symbol for a given product.
     func currency(for product: PurchaseServiceProduct) -> String? {
-        guard let apphudProduct = availableProducts.first(where: { $0.productId == product.rawValue }),
-              let skProduct = apphudProduct.skProduct else {
-            return nil
-        }
+        guard let skProduct = getSKProduct(for: product) else { return nil }
         return skProduct.currency
     }
 
     /// Calculates and returns the per-day price string.
     func perDayPrice(for product: PurchaseServiceProduct) -> String {
+        let defaultPerDayPrice = "$1.28"
+        
         guard let priceValue = price(for: product),
               let currencySymbol = currency(for: product) else {
-            // Fallback price
-            return "$1.28"
+            return defaultPerDayPrice
         }
         
-        let perDay: Double
-        if product == .week {
-            perDay = priceValue / 7
-        } else {
-            perDay = priceValue / 30
-        }
+        let perDay = product == .week ? priceValue / 7 : priceValue / 30
         
         // Formats the string with 2 decimal places
         return String(format: "%.2f%@", perDay, currencySymbol)
     }
 
     // MARK: - Private Methods
+
+    private func getProductId(for plan: SubscriptionPlan) -> String? {
+        switch plan {
+        case .monthly:
+            return PurchaseServiceProduct.month.rawValue
+        case .weekly:
+            return PurchaseServiceProduct.week.rawValue
+        }
+    }
+
+    private func getProduct(with id: String) -> ApphudProduct? {
+        return availableProducts.first(where: { $0.productId == id })
+    }
+
+    private func getSKProduct(for product: PurchaseServiceProduct) -> SKProduct? {
+        return getProduct(with: product.rawValue)?.skProduct
+    }
+    
+    private func handlePurchaseResult(_ result: ApphudPurchaseResult, completion: @escaping PurchaseCompletion) {
+        if let error = result.error {
+            print("Apphud: Purchase failed with error: \(error.localizedDescription)")
+            completion(.failure(error))
+            return
+        }
+
+        if let subscription = result.subscription, subscription.isActive() || result.nonRenewingPurchase != nil {
+            print("Apphud: Purchase successful.")
+            completion(.success)
+        } else {
+            print("Apphud: Purchase failed - unknown reason.")
+            completion(.failure(PurchaseError.purchaseFailed))
+        }
+    }
+
+    private func handleRestoreResult(subscriptions: [ApphudSubscription]?, error: Error?, completion: @escaping PurchaseCompletion) {
+        if let restoreError = error {
+            completion(.failure(restoreError))
+            return
+        }
+        
+        if subscriptions?.first(where: { $0.isActive() }) != nil {
+            print("Apphud: Restore successful - active subscription found.")
+            completion(.success)
+        } else {
+            print("Apphud: Restore completed, but no active subscription found.")
+            completion(.failure(PurchaseError.noActiveSubscription))
+        }
+    }
     
     /// Asynchronously fetches Apphud products from the paywalls.
     private func fetchProducts() async {

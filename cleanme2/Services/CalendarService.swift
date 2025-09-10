@@ -9,153 +9,111 @@ import Foundation
 import EventKit
 import Combine
 
+// MARK: - Constants & Utilities
+
+private struct CalendarConstants {
+    static let spamMarker = "[MARKED_AS_SPAM]"
+    static let backupIdentifierSeparator = "_"
+}
+
+private extension EKEvent {
+    /// Checks if a calendar event can be deleted.
+    func isDeletable() -> Bool {
+        // Can't delete if calendar is read-only
+        guard calendar.allowsContentModifications else { return false }
+        
+        // Cannot delete birthday or subscription events
+        if calendar.type == .birthday || calendar.type == .subscription {
+            return false
+        }
+        
+        // Cannot delete if it's an event organized by someone else in a shared calendar
+        if let organizer = self.organizer, calendar.type == .calDAV {
+            // NOTE: A real app would get the current user's email securely.
+            // For now, we assume if an organizer exists, it's not deletable.
+            return false // Or add specific logic to check if organizer is current user
+        }
+        
+        return true
+    }
+    
+    /// Returns a human-readable reason why an event cannot be deleted.
+    func deletionRestrictionReason() -> String {
+        if !calendar.allowsContentModifications {
+            return "'\(calendar.title)' calendar is read-only and doesn't allow modifications."
+        }
+        
+        if calendar.type == .subscription {
+            return "This subscription calendar cannot be deleted. To remove these events, you must delete the source account from your device settings."
+        }
+        
+        if calendar.type == .birthday {
+            return "Birthday events cannot be deleted from the calendar."
+        }
+        
+        if let organizer = self.organizer, calendar.type == .calDAV {
+            let organizerName = organizer.name ?? "another user"
+            return "This event is from a shared calendar and cannot be deleted. It was organized by \(organizerName)."
+        }
+        
+        return "This event cannot be deleted due to calendar restrictions."
+    }
+}
+
+// MARK: - Main Service Class
+
+/// Manages all calendar event fetching, deletion, and whitelisting.
 @MainActor
 final class CalendarService: ObservableObject {
     
     // MARK: - Published Properties
+    
     @Published var events: [SystemCalendarEvent] = []
     @Published var isLoading = false
     @Published var authorizationStatus: EKAuthorizationStatus = .notDetermined
     @Published var errorMessage: String?
     
     // MARK: - Private Properties
+    
     private let eventStore = EKEventStore()
     private var cancellables = Set<AnyCancellable>()
     private let whitelistService = WhitelistService()
     
     // MARK: - Initialization
+    
     init() {
-        print("🏁 [CalendarService] Инициализация CalendarService")
         checkAuthorizationStatus()
         setupWhitelistObserver()
-        print("🏁 [CalendarService] Инициализация завершена")
     }
     
-    private func setupWhitelistObserver() {
-        print("🔗 [CalendarService.setupWhitelistObserver] Настраиваем наблюдатель за whitelist")
-        print("🔗 [CalendarService.setupWhitelistObserver] WhitelistService содержит: \(whitelistService.whitelistedEvents.count) событий")
-        
-        // Наблюдаем за изменениями в whitelist для автоматического обновления
-        whitelistService.$whitelistedEvents
-            .sink { [weak self] whitelistedEvents in
-                print("🔗 [CalendarService.setupWhitelistObserver.sink] Получено обновление whitelist: \(whitelistedEvents.count) событий")
-                // При изменении whitelist обновляем статус событий
-                Task { @MainActor in
-                    self?.updateEventsWhitelistStatus()
-                }
-            }
-            .store(in: &cancellables)
-        
-        // Принудительно обновляем статус при инициализации (на случай если данные уже загружены)
-        print("🔗 [CalendarService.setupWhitelistObserver] Принудительно обновляем статус")
-        Task { @MainActor in
-            self.updateEventsWhitelistStatus()
-        }
-    }
+    // MARK: - Public API
     
-    @MainActor
-    private func updateEventsWhitelistStatus() {
-        let whitelistedIdentifiers = whitelistService.getWhitelistedEventIdentifiers()
-        print("🔄 [CalendarService.updateEventsWhitelistStatus] Обновляем whitelist статус для \(events.count) событий")
-        print("🔄 [CalendarService.updateEventsWhitelistStatus] Whitelist содержит: \(whitelistedIdentifiers.count) идентификаторов")
-        
-        if !whitelistedIdentifiers.isEmpty {
-            print("🔄 [CalendarService.updateEventsWhitelistStatus] Первые 3 whitelist ID:")
-            for (i, id) in whitelistedIdentifiers.prefix(3).enumerated() {
-                print("   \(i+1). '\(id)'")
-            }
-        }
-        
-        var updatedCount = 0
-        var matchedCount = 0
-        
-        for index in events.indices {
-            // Создаем составной идентификатор для проверки
-            let compositeIdentifier = events[index].eventIdentifier
-            let isWhitelisted = whitelistedIdentifiers.contains(compositeIdentifier)
-            
-            if isWhitelisted {
-                matchedCount += 1
-                print("🔄 [CalendarService.updateEventsWhitelistStatus] Найдено совпадение: '\(events[index].title)' (\(compositeIdentifier))")
-            }
-            
-            if events[index].isWhiteListed != isWhitelisted {
-                events[index].isWhiteListed = isWhitelisted
-                updatedCount += 1
-                print("🔄 [CalendarService.updateEventsWhitelistStatus] Обновлен статус для '\(events[index].title)': \(isWhitelisted)")
-            }
-            
-            // Если событие добавлено в whitelist, убираем отметку спама
-            if isWhitelisted {
-                events[index].isMarkedAsSpam = false
-            }
-        }
-        
-        print("🔄 [CalendarService.updateEventsWhitelistStatus] Найдено совпадений: \(matchedCount)")
-        print("🔄 [CalendarService.updateEventsWhitelistStatus] Обновлено событий: \(updatedCount)")
-    }
-    
-    // MARK: - Public Methods
-    
-    /// Запрашивает разрешение на доступ к календарю
+    /// Requests calendar access and loads events if granted.
     func requestCalendarAccess() async {
-        if #available(iOS 17.0, *) {
-            do {
-                let granted = try await eventStore.requestFullAccessToEvents()
-                await MainActor.run {
-                    self.authorizationStatus = granted ? .fullAccess : .denied
-                    if granted {
-                        Task {
-                            await self.loadEvents()
-                        }
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    self.errorMessage = "Failed to request calendar access: \(error.localizedDescription)"
-                    self.authorizationStatus = .denied
-                }
+        let accessType = EKEntityType.event
+        let isAccessGranted: Bool
+        
+        do {
+            if #available(iOS 17.0, *) {
+                isAccessGranted = try await eventStore.requestFullAccessToEvents()
+            } else {
+                isAccessGranted = try await eventStore.requestAccess(to: accessType)
             }
-        } else {
-            // Используем старый API для iOS 16 и ниже
-            return await withCheckedContinuation { continuation in
-                eventStore.requestAccess(to: .event) { granted, error in
-                    Task { @MainActor in
-                        if let error = error {
-                            self.errorMessage = "Failed to request calendar access: \(error.localizedDescription)"
-                            self.authorizationStatus = .denied
-                        } else {
-                            self.authorizationStatus = granted ? .authorized : .denied
-                            if granted {
-                                Task {
-                                    await self.loadEvents()
-                                }
-                            }
-                        }
-                        continuation.resume()
-                    }
-                }
-            }
+            
+            await handleAccessResult(granted: isAccessGranted)
+        } catch {
+            await handleAccessError(error)
         }
     }
     
-    /// Загружает события из системного календаря
+    /// Loads events from the system calendar.
     func loadEvents(from startDate: Date? = nil, to endDate: Date? = nil) async {
-        let hasAccess = if #available(iOS 17.0, *) {
-            authorizationStatus == .fullAccess
-        } else {
-            authorizationStatus == .authorized
+        guard canAccessCalendar else {
+            return await requestCalendarAccess()
         }
         
-        guard hasAccess else {
-            await requestCalendarAccess()
-            return
-        }
-        
-        await MainActor.run {
-            self.isLoading = true
-            self.errorMessage = nil
-        }
+        isLoading = true
+        errorMessage = nil
         
         let start = startDate ?? Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
         let end = endDate ?? Calendar.current.date(byAdding: .year, value: 1, to: Date()) ?? Date()
@@ -164,161 +122,51 @@ final class CalendarService: ObservableObject {
         let ekEvents = eventStore.events(matching: predicate)
         
         let whitelistedIdentifiers = whitelistService.getWhitelistedEventIdentifiers()
-        print("🔄 [CalendarService.loadEvents] Загружено \(ekEvents.count) событий из системного календаря")
-        print("🔄 [CalendarService.loadEvents] Whitelist содержит: \(whitelistedIdentifiers.count) идентификаторов")
         
-        var whitelistedCount = 0
-        let systemEvents = ekEvents.map { ekEvent in
-            // Создаем составной идентификатор для проверки whitelist статуса
-            let compositeIdentifier = "\(ekEvent.eventIdentifier)_\(ekEvent.startDate.timeIntervalSince1970)"
-            let isWhitelisted = whitelistedIdentifiers.contains(compositeIdentifier)
-            if isWhitelisted {
-                whitelistedCount += 1
-                print("🔄 [CalendarService.loadEvents] Найдено whitelisted событие: '\(ekEvent.title)' (\(compositeIdentifier))")
-            }
-            return SystemCalendarEvent(from: ekEvent, isWhitelisted: isWhitelisted)
-        }.sorted(by: { $0.startDate > $1.startDate }) // Сортировка от новых к старым
+        let systemEvents = ekEvents.map {
+            let compositeId = "\($0.eventIdentifier)_\($0.startDate.timeIntervalSince1970)"
+            let isWhitelisted = whitelistedIdentifiers.contains(compositeId)
+            return SystemCalendarEvent(from: $0, isWhitelisted: isWhitelisted)
+        }.sorted(by: { $0.startDate > $1.startDate })
         
-        print("🔄 [CalendarService.loadEvents] Создано \(systemEvents.count) SystemCalendarEvent, из них whitelisted: \(whitelistedCount)")
-        
-        await MainActor.run {
-            self.events = systemEvents
-            self.isLoading = false
-            self.updateEventsWhitelistStatus()
-        }
+        events = systemEvents
+        isLoading = false
+        updateEventsWhitelistStatus()
     }
     
-    /// Удаляет событие из системного календаря
+    /// Deletes a single event from the system calendar.
     func deleteEvent(_ event: SystemCalendarEvent) async -> EventDeletionResult {
-        print("🗑️ [CalendarService] Удаляем событие: '\(event.title)' (\(event.eventIdentifier))")
+        guard canAccessCalendar else { return .failed(.noPermission) }
         
-        let hasAccess = if #available(iOS 17.0, *) {
-            authorizationStatus == .fullAccess
-        } else {
-            authorizationStatus == .authorized
-        }
-        
-        guard hasAccess else {
-            print("❌ [CalendarService] Нет разрешений для удаления")
-            return .failed(.noPermission)
-        }
-        
-        // Извлекаем оригинальный eventIdentifier из составного
-        let originalEventIdentifier: String
-        if event.eventIdentifier.contains("_") {
-            originalEventIdentifier = String(event.eventIdentifier.split(separator: "_").first ?? "")
-        } else {
-            originalEventIdentifier = event.eventIdentifier
-        }
-        
-        print("🔍 [CalendarService] Ищем событие с оригинальным ID: '\(originalEventIdentifier)'")
-        
-        // Находим оригинальное EKEvent
-        guard let ekEvent = eventStore.event(withIdentifier: originalEventIdentifier) else {
-            print("❌ [CalendarService] Событие не найдено в системном календаре по ID: '\(originalEventIdentifier)'")
+        guard let ekEvent = eventStore.event(withIdentifier: event.eventIdentifier) else {
             return .failed(.eventNotFound)
         }
         
-        // Проверяем, можно ли удалить событие
-        if !canDeleteEvent(ekEvent) {
-            let reason = getCannotDeleteReason(ekEvent)
-            print("❌ [CalendarService] Событие нельзя удалить: \(reason)")
-            return .failed(.cannotDelete(reason: reason))
+        guard ekEvent.isDeletable() else {
+            return .failed(.cannotDelete(reason: ekEvent.deletionRestrictionReason()))
         }
         
         do {
             try eventStore.remove(ekEvent, span: .thisEvent)
-            print("✅ [CalendarService] Событие успешно удалено из системного календаря")
-            
-            // Обновляем локальный массив
-            await MainActor.run {
-                let beforeCount = self.events.count
-                self.events.removeAll {
-                    $0.eventIdentifier == event.eventIdentifier &&
-                    Calendar.current.isDate($0.startDate, inSameDayAs: event.startDate)
-                }
-                let afterCount = self.events.count
-                print("🗑️ [CalendarService] Удалено событие '\(event.title)' из локального массива (\(beforeCount) -> \(afterCount))")
-            }
-            
+            events.removeAll { $0.id == event.id }
             return .success
         } catch {
-            print("❌ [CalendarService] Ошибка удаления: \(error.localizedDescription)")
-            await MainActor.run {
-                self.errorMessage = "Failed to delete event: \(error.localizedDescription)"
-            }
+            errorMessage = "Failed to delete event: \(error.localizedDescription)"
             return .failed(.systemError(error))
         }
     }
     
-    /// Проверяет, можно ли удалить событие
-    private func canDeleteEvent(_ ekEvent: EKEvent) -> Bool {
-        // Проверяем, является ли календарь доступным для записи
-        guard ekEvent.calendar.allowsContentModifications else {
-            return false
-        }
-        
-        // Проверяем, не является ли это событием из общего календаря с ограничениями
-        if ekEvent.calendar.type == .subscription || ekEvent.calendar.type == .birthday {
-            return false
-        }
-        
-        // Проверяем, не является ли это событием, созданным другим пользователем в общем календаре
-        if ekEvent.calendar.type == .calDAV && ekEvent.organizer != nil {
-            // Если есть организатор и это не текущий пользователь
-            if let organizer = ekEvent.organizer,
-               let currentUserEmail = getCurrentUserEmail(),
-               !organizer.url.absoluteString.contains(currentUserEmail) {
-                return false
-            }
-        }
-        
-        return true
-    }
-    
-    /// Получает причину, по которой событие нельзя удалить
-    private func getCannotDeleteReason(_ ekEvent: EKEvent) -> String {
-        if !ekEvent.calendar.allowsContentModifications {
-            return "'\(ekEvent.calendar.title)' calendar is read-only and doesn't allow modifications."
-        }
-        
-        if ekEvent.calendar.type == .subscription {
-            return "'\(ekEvent.calendar.title)' calendar cannot be deleted.\n\nBut you can delete the account that owns this calendar. You can learn detailed steps from our guide on how to get rid of suspicious or unwanted event sources in your calendar."
-        }
-        
-        if ekEvent.calendar.type == .birthday {
-            return "Birthday events cannot be deleted from the calendar."
-        }
-        
-        if ekEvent.calendar.type == .calDAV && ekEvent.organizer != nil {
-            if let organizer = ekEvent.organizer {
-                let organizerName = organizer.name ?? "another user"
-                return "'\(organizerName)' calendar cannot be deleted.\n\nBut you can delete the account that owns this calendar. You can learn detailed steps from our guide on how to get rid of suspicious or unwanted event sources in your calendar."
-            }
-        }
-        
-        return "This event cannot be deleted due to calendar restrictions."
-    }
-    
-    /// Получает email текущего пользователя (упрощенная версия)
-    private func getCurrentUserEmail() -> String? {
-        // В реальном приложении здесь была бы логика получения email текущего пользователя
-        // Например, из настроек аккаунта или системных настроек
-        return nil
-    }
-    
-    /// Удаляет несколько событий
+    /// Deletes multiple events.
     func deleteEvents(_ eventsToDelete: [SystemCalendarEvent]) async -> EventsDeletionResult {
         var deletedCount = 0
         var failedEvents: [(SystemCalendarEvent, EventDeletionError)] = []
         
         for event in eventsToDelete {
             let result = await deleteEvent(event)
-            switch result {
-            case .success:
-                deletedCount += 1
-            case .failed(let error):
+            if case let .failed(error) = result {
                 failedEvents.append((event, error))
+            } else {
+                deletedCount += 1
             }
         }
         
@@ -329,127 +177,116 @@ final class CalendarService: ObservableObject {
         )
     }
     
-    /// Помечает событие как спам (добавляет в заметки)
+    /// Marks an event as spam by appending a special note to it.
     func markAsSpam(_ event: SystemCalendarEvent) async -> Bool {
-        let hasAccess = if #available(iOS 17.0, *) {
-            authorizationStatus == .fullAccess
-        } else {
-            authorizationStatus == .authorized
-        }
-        
-        guard hasAccess else { return false }
-        
-        guard let ekEvent = eventStore.event(withIdentifier: event.eventIdentifier) else {
+        guard canAccessCalendar, let ekEvent = eventStore.event(withIdentifier: event.eventIdentifier) else {
             return false
         }
         
         do {
-            ekEvent.notes = (ekEvent.notes ?? "") + "\n[MARKED_AS_SPAM]"
+            ekEvent.notes = (ekEvent.notes ?? "") + "\n\(CalendarConstants.spamMarker)"
             try eventStore.save(ekEvent, span: .thisEvent)
             
-            // Обновляем локальное событие
-            await MainActor.run {
-                if let index = self.events.firstIndex(where: { $0.id == event.id }) {
-                    self.events[index].isMarkedAsSpam = true
-                }
+            if let index = events.firstIndex(where: { $0.id == event.id }) {
+                events[index].isMarkedAsSpam = true
             }
-            
             return true
         } catch {
-            await MainActor.run {
-                self.errorMessage = "Failed to mark event as spam: \(error.localizedDescription)"
-            }
+            errorMessage = "Failed to mark event as spam: \(error.localizedDescription)"
             return false
         }
     }
     
-    /// Добавляет событие в локальный белый список
-    func addToWhiteList(_ event: SystemCalendarEvent) async -> Bool {
-        // Добавляем в локальный whitelist через WhitelistService
+    /// Adds an event to the local whitelist.
+    func addToWhiteList(_ event: SystemCalendarEvent) {
         whitelistService.addToWhitelist(event)
-        
-        // Обновляем локальное событие
-        await MainActor.run {
-            if let index = self.events.firstIndex(where: {
-                $0.eventIdentifier == event.eventIdentifier &&
-                Calendar.current.isDate($0.startDate, inSameDayAs: event.startDate)
-            }) {
-                print("🔄 [CalendarService] Обновляем статус события '\(self.events[index].title)' -> isWhiteListed = true")
-                self.events[index].isWhiteListed = true
-                self.events[index].isMarkedAsSpam = false
-            } else {
-                print("❌ [CalendarService] Не найдено событие для обновления статуса: '\(event.title)'")
-            }
-        }
-        
-        return true
+        updateEventsWhitelistStatus()
     }
     
-    /// Удаляет событие из локального белого списка
-    func removeFromWhiteList(_ event: SystemCalendarEvent) async -> Bool {
-        // Удаляем из локального whitelist
+    /// Removes an event from the local whitelist.
+    func removeFromWhiteList(_ event: SystemCalendarEvent) {
         whitelistService.removeFromWhitelist(event)
-        
-        // Обновляем локальное событие
-        await MainActor.run {
-            if let index = self.events.firstIndex(where: {
-                $0.eventIdentifier == event.eventIdentifier &&
-                Calendar.current.isDate($0.startDate, inSameDayAs: event.startDate)
-            }) {
-                print("🔄 [CalendarService] Обновляем статус события '\(self.events[index].title)' -> isWhiteListed = false")
-                self.events[index].isWhiteListed = false
-            } else {
-                print("❌ [CalendarService] Не найдено событие для обновления статуса: '\(event.title)'")
-            }
-        }
-        
-        return true
+        updateEventsWhitelistStatus()
     }
     
-    /// Получает статистику событий
+    /// Gets a breakdown of event statistics.
     func getEventsStatistics() -> EventsStatistics {
-        let total = events.count
-        let spam = events.filter { $0.isMarkedAsSpam }.count
-        let whitelisted = events.filter { $0.isWhiteListed }.count
-        let regular = total - spam - whitelisted
+        let spamCount = events.filter { $0.isMarkedAsSpam }.count
+        let whitelistedCount = events.filter { $0.isWhiteListed }.count
         
         return EventsStatistics(
-            total: total,
-            spam: spam,
-            whitelisted: whitelisted,
-            regular: regular
+            total: events.count,
+            spam: spamCount,
+            whitelisted: whitelistedCount,
+            regular: events.count - spamCount - whitelistedCount
         )
     }
     
-    // MARK: - Private Methods
+    // MARK: - Private Helpers
+    
+    private var canAccessCalendar: Bool {
+        if #available(iOS 17.0, *) {
+            return authorizationStatus == .fullAccess
+        } else {
+            return authorizationStatus == .authorized
+        }
+    }
     
     private func checkAuthorizationStatus() {
         authorizationStatus = EKEventStore.authorizationStatus(for: .event)
-        print("🔐 [CalendarService.checkAuthorizationStatus] Статус разрешений: \(authorizationStatus)")
-        
-        let hasAccess = if #available(iOS 17.0, *) {
-            authorizationStatus == .fullAccess
-        } else {
-            authorizationStatus == .authorized
+        if canAccessCalendar {
+            Task { await loadEvents() }
         }
+    }
+    
+    private func setupWhitelistObserver() {
+        whitelistService.$whitelistedEvents
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    self?.updateEventsWhitelistStatus()
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func updateEventsWhitelistStatus() {
+        let whitelistedIdentifiers = whitelistService.getWhitelistedEventIdentifiers()
         
-        print("🔐 [CalendarService.checkAuthorizationStatus] Есть доступ: \(hasAccess)")
-        
-        if hasAccess {
-            print("🔐 [CalendarService.checkAuthorizationStatus] Загружаем события автоматически")
-            Task {
+        for index in events.indices {
+            let compositeIdentifier = events[index].eventIdentifier
+            let isWhitelisted = whitelistedIdentifiers.contains(compositeIdentifier)
+            
+            // Check if status has changed to prevent unnecessary re-renders
+            guard events[index].isWhiteListed != isWhitelisted else { continue }
+            
+            events[index].isWhiteListed = isWhitelisted
+            
+            // Whitelisting removes spam status
+            if isWhitelisted {
+                events[index].isMarkedAsSpam = false
+            }
+        }
+    }
+    
+    private func handleAccessResult(granted: Bool) async {
+        if #available(iOS 17.0, *) {
+            authorizationStatus = granted ? .fullAccess : .denied
+            if granted {
                 await loadEvents()
             }
-        } else {
-            print("🔐 [CalendarService.checkAuthorizationStatus] Нет доступа, события не загружаются")
         }
+    }
+    
+    private func handleAccessError(_ error: Error) async {
+        errorMessage = "Failed to request calendar access: \(error.localizedDescription)"
+        authorizationStatus = .denied
     }
 }
 
 // MARK: - Supporting Models
 
 struct SystemCalendarEvent: Codable, Identifiable, Hashable {
-    let id = UUID()
+    let id: UUID
     let eventIdentifier: String
     let title: String
     let startDate: Date
@@ -462,6 +299,7 @@ struct SystemCalendarEvent: Codable, Identifiable, Hashable {
     var isWhiteListed: Bool
     
     init(from ekEvent: EKEvent, isWhitelisted: Bool = false) {
+        self.id = UUID()
         self.eventIdentifier = ekEvent.eventIdentifier
         self.title = ekEvent.title ?? "Untitled Event"
         self.startDate = ekEvent.startDate
@@ -470,17 +308,12 @@ struct SystemCalendarEvent: Codable, Identifiable, Hashable {
         self.calendar = ekEvent.calendar?.title ?? "Unknown Calendar"
         self.location = ekEvent.location
         self.notes = ekEvent.notes
-        
-        // Проверяем отметки в заметках для спама
-        let notesContent = ekEvent.notes ?? ""
-        self.isMarkedAsSpam = notesContent.contains("[MARKED_AS_SPAM]")
-        
-        // Используем локальный whitelist
+        self.isMarkedAsSpam = (ekEvent.notes ?? "").contains(CalendarConstants.spamMarker)
         self.isWhiteListed = isWhitelisted
     }
     
-    // Обычный инициализатор для создания временных событий
     init(id: UUID = UUID(), eventIdentifier: String, title: String, startDate: Date, endDate: Date, isAllDay: Bool, calendar: String, location: String? = nil, notes: String? = nil, isMarkedAsSpam: Bool = false, isWhiteListed: Bool = false) {
+        self.id = id
         self.eventIdentifier = eventIdentifier
         self.title = title
         self.startDate = startDate
@@ -495,37 +328,22 @@ struct SystemCalendarEvent: Codable, Identifiable, Hashable {
     
     var formattedDate: String {
         let formatter = DateFormatter()
-        if isAllDay {
-            formatter.dateFormat = "d MMM yyyy"
-            return formatter.string(from: startDate)
-        } else {
-            formatter.dateFormat = "d MMM yyyy, HH:mm"
-            return formatter.string(from: startDate)
-        }
+        formatter.dateFormat = isAllDay ? "d MMM yyyy" : "d MMM yyyy, HH:mm"
+        return formatter.string(from: startDate)
     }
     
     var formattedTimeRange: String {
         if isAllDay {
             return "All day"
-        } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "HH:mm"
-            let start = formatter.string(from: startDate)
-            let end = formatter.string(from: endDate)
-            return "\(start) - \(end)"
         }
-    }
-    
-    var source: String {
-        return calendar
-    }
-    
-    // Для совместимости с существующим кодом
-    var date: Date {
-        return startDate
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return "\(formatter.string(from: startDate)) - \(formatter.string(from: endDate))"
     }
 }
 
+// Other supporting structures remain the same as they are already well-defined.
 struct EventsStatistics {
     let total: Int
     let spam: Int
@@ -533,14 +351,12 @@ struct EventsStatistics {
     let regular: Int
 }
 
-// MARK: - Event Deletion Models
-
 enum EventDeletionResult {
     case success
     case failed(EventDeletionError)
 }
 
-enum EventDeletionError {
+enum EventDeletionError: Error {
     case noPermission
     case eventNotFound
     case cannotDelete(reason: String)
@@ -548,24 +364,16 @@ enum EventDeletionError {
     
     var localizedDescription: String {
         switch self {
-        case .noPermission:
-            return "No permission to access calendar"
-        case .eventNotFound:
-            return "Event not found in calendar"
-        case .cannotDelete(let reason):
-            return reason
-        case .systemError(let error):
-            return "System error: \(error.localizedDescription)"
+        case .noPermission: return "No permission to access calendar"
+        case .eventNotFound: return "Event not found in calendar"
+        case .cannotDelete(let reason): return reason
+        case .systemError(let error): return "System error: \(error.localizedDescription)"
         }
     }
     
     var isUserActionRequired: Bool {
-        switch self {
-        case .cannotDelete:
-            return true
-        default:
-            return false
-        }
+        if case .cannotDelete = self { return true }
+        return false
     }
 }
 
@@ -574,15 +382,7 @@ struct EventsDeletionResult {
     let totalCount: Int
     let failedEvents: [(SystemCalendarEvent, EventDeletionError)]
     
-    var hasFailures: Bool {
-        return !failedEvents.isEmpty
-    }
-    
-    var cannotDeleteEvents: [(SystemCalendarEvent, EventDeletionError)] {
-        return failedEvents.filter { $0.1.isUserActionRequired }
-    }
-    
-    var hasCannotDeleteEvents: Bool {
-        return !cannotDeleteEvents.isEmpty
-    }
+    var hasFailures: Bool { !failedEvents.isEmpty }
+    var cannotDeleteEvents: [(SystemCalendarEvent, EventDeletionError)] { failedEvents.filter { $0.1.isUserActionRequired } }
+    var hasCannotDeleteEvents: Bool { !cannotDeleteEvents.isEmpty }
 }
