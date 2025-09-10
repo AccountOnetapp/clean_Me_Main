@@ -104,27 +104,28 @@ struct SmartCleanView: View {
             
             Spacer()
             
-            Button(action: {
-                isPaywallPresented = true
-            }) { 
-                HStack(spacing: 8) {
-                    Text("Pro")
-                        .fontWeight(.semibold)
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 16))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(
-                    LinearGradient(
-                        colors: [Color.purple, Color.blue],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .clipShape(Capsule())
-            }
+            // todo PRO
+//            Button(action: {
+//                isPaywallPresented = true
+//            }) { 
+//                HStack(spacing: 8) {
+//                    Text("Pro")
+//                        .fontWeight(.semibold)
+//                    Image(systemName: "star.fill")
+//                        .font(.system(size: 16))
+//                }
+//                .foregroundColor(.white)
+//                .padding(.horizontal, 16)
+//                .padding(.vertical, 10)
+//                .background(
+//                    LinearGradient(
+//                        colors: [Color.purple, Color.blue],
+//                        startPoint: .leading,
+//                        endPoint: .trailing
+//                    )
+//                )
+//                .clipShape(Capsule())
+//            }
         }
         .padding(.top, 12)
     }
