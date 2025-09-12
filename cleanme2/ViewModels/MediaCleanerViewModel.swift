@@ -165,8 +165,8 @@ final class MediaCleanerViewModel: ObservableObject {
         
         // Start actual media scanning
         Task.detached {
-            self.mediaCleanerService.scanAllImages()
-            self.mediaCleanerService.scanVideos()
+            await self.mediaCleanerService.scanAllImages()
+            await self.mediaCleanerService.scanVideos()
         }
         
         // Monitor progress from the service

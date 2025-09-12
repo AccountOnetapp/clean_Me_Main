@@ -189,7 +189,7 @@ struct SafeStorageView: View {
             }
             .padding(.horizontal, 16 * scalingFactor)
             .padding(.vertical, 12 * scalingFactor)
-            .background(CMColor.cardBackground)
+            .background(CMColor.surface)
             .cornerRadius(12 * scalingFactor)
             .overlay(
                 RoundedRectangle(cornerRadius: 12 * scalingFactor)
@@ -250,7 +250,7 @@ struct SafeStorageView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16 * scalingFactor)
-        .background(CMColor.cardBackground)
+        .background(CMColor.surface)
         .cornerRadius(16 * scalingFactor)
         .overlay(
             RoundedRectangle(cornerRadius: 16 * scalingFactor)
@@ -285,7 +285,7 @@ struct SafeStorageView: View {
                         .padding(.vertical, 20 * scalingFactor)
                 }
                 .frame(maxWidth: .infinity)
-                .background(CMColor.cardBackground)
+                .background(CMColor.surface)
                 .cornerRadius(16 * scalingFactor)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16 * scalingFactor)
@@ -303,7 +303,7 @@ struct SafeStorageView: View {
                         }
                     }
                 }
-                .background(CMColor.cardBackground)
+                .background(CMColor.surface)
                 .cornerRadius(16 * scalingFactor)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16 * scalingFactor)

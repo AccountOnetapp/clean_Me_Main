@@ -412,7 +412,7 @@ struct EnhancedDocumentPreviewView: View {
             }
         }
         .padding(16 * scalingFactor)
-        .background(CMColor.cardBackground)
+        .background(CMColor.surface)
         .cornerRadius(12 * scalingFactor)
         .overlay(
             RoundedRectangle(cornerRadius: 12 * scalingFactor)
@@ -471,7 +471,7 @@ struct EnhancedDocumentPreviewView: View {
         }
         .padding(.horizontal, 16 * scalingFactor)
         .padding(.vertical, 12 * scalingFactor)
-        .background(CMColor.cardBackground)
+        .background(CMColor.surface)
         .overlay(
             Rectangle()
                 .frame(height: 0.5)

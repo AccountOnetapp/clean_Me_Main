@@ -159,7 +159,7 @@ struct SpeedTestView: View {
             }
         }
         .padding(24 * scalingFactor)
-        .background(CMColor.cardBackground)
+        .background(CMColor.surface)
         .clipShape(RoundedRectangle(cornerRadius: 24 * scalingFactor))
         .shadow(color: CMColor.primary.opacity(0.08), radius: 16, x: 0, y: 16)
     }
@@ -186,7 +186,7 @@ struct SpeedTestView: View {
                 Spacer()
             }
             .padding(16 * scalingFactor)
-            .background(CMColor.cardBackground)
+            .background(CMColor.surface)
             .clipShape(RoundedRectangle(cornerRadius: 16 * scalingFactor))
             .shadow(color: CMColor.primary.opacity(0.08), radius: 16, x: 0, y: 16)
 
@@ -211,7 +211,7 @@ struct SpeedTestView: View {
                 Spacer()
             }
             .padding(16 * scalingFactor)
-            .background(CMColor.cardBackground)
+            .background(CMColor.surface)
             .clipShape(RoundedRectangle(cornerRadius: 16 * scalingFactor))
             .shadow(color: CMColor.primary.opacity(0.08), radius: 16, x: 0, y: 16)
         }

@@ -38,7 +38,7 @@ struct SettingsRow: View {
         }
         .padding(.vertical, 14)
         .padding(.horizontal, 16)
-        .background(CMColor.cardBackground)
+        .background(CMColor.surface)
         .contentShape(Rectangle()) // Make the whole row tappable
         .onTapGesture {
             if isToggle {

@@ -58,6 +58,7 @@ extension URL {
                         closure(.failure(error))
                     }
                     cancellable = nil
+                    print(cancellable as Any)
                 },
                 receiveValue: { latency in
                     closure(.success(latency))

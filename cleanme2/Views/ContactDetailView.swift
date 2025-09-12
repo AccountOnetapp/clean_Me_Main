@@ -23,7 +23,7 @@ struct ContactDetailView: UIViewControllerRepresentable {
         contactViewController.allowsActions = true
         
         // Wrap in navigation controller
-        let navigationController = UINavigationController(rootViewController: contactViewController)
+        let _ = UINavigationController(rootViewController: contactViewController)
         
         return contactViewController
     }

@@ -28,7 +28,7 @@ private extension EKEvent {
         }
         
         // Cannot delete if it's an event organized by someone else in a shared calendar
-        if let organizer = self.organizer, calendar.type == .calDAV {
+        if self.organizer != nil, calendar.type == .calDAV {
             // NOTE: A real app would get the current user's email securely.
             // For now, we assume if an organizer exists, it's not deletable.
             return false // Or add specific logic to check if organizer is current user
@@ -124,7 +124,7 @@ final class CalendarService: ObservableObject {
         let whitelistedIdentifiers = whitelistService.getWhitelistedEventIdentifiers()
         
         let systemEvents = ekEvents.map {
-            let compositeId = "\($0.eventIdentifier)_\($0.startDate.timeIntervalSince1970)"
+            let compositeId = "\($0.eventIdentifier ?? "")_\($0.startDate.timeIntervalSince1970)"
             let isWhitelisted = whitelistedIdentifiers.contains(compositeId)
             return SystemCalendarEvent(from: $0, isWhitelisted: isWhitelisted)
         }.sorted(by: { $0.startDate > $1.startDate })

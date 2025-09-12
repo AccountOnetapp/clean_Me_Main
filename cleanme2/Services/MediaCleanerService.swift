@@ -229,13 +229,13 @@ final class MediaCleanerServiceImpl: NSObject, PHPhotoLibraryChangeObserver, Med
         duplicatesRequestOptions.resizeMode = .fast
 
         let imageProcessor = self.imageProcessor
-        let progress = self._imageProgress
+//        let progress = self._imageProgress
         let imageManager = self.cachingImageManager
         let imageQueue = self.imageQueue
         let dupliQueue = self.dupliQueue
         let blurrQueue = self.blurrQueue
 
-        let megabytes = self.megabytes
+//        let megabytes = self.megabytes
 
         let cacheService = self.cacheService
 
@@ -499,7 +499,7 @@ final class MediaCleanerServiceImpl: NSObject, PHPhotoLibraryChangeObserver, Med
         }()
 
         let imageManager = self.cachingImageManager
-        let megabytes = self.megabytes
+//        let megabytes = self.megabytes
         let _ = self._videosPreview
 
         func insertedVideo(_ model: MediaCleanerServiceModel) -> Bool {

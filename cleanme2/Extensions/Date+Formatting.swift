@@ -27,9 +27,7 @@ extension Date {
     
     /// Форматирует дату в строку вида "Today", "Yesterday" или "12 Mar 2023"
     func formatAsRelativeShortDate() -> String {
-        let calendar = Calendar.current
-        let now = Date()
-        
+        let calendar = Calendar.current        
         if calendar.isDateInToday(self) {
             return "Today"
         } else if calendar.isDateInYesterday(self) {

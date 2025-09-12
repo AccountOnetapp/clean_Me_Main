@@ -120,6 +120,7 @@ extension UploadBandwidthService: URLSessionTaskDelegate {
     
     public func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
         if let error = error {
+            print(error)
             resultSubject.send(completion: .failure(.requestFailed))
         }
         cancellables.removeAll()
@@ -127,6 +128,7 @@ extension UploadBandwidthService: URLSessionTaskDelegate {
     
     public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
+            print(error)
             resultSubject.send(completion: .failure(.requestFailed))
             session.invalidateAndCancel()
             cancellables.removeAll()

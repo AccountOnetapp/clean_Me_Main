@@ -309,9 +309,6 @@ class VideoPlayerLoader: ObservableObject {
                     self.isLoading = false
                     self.hasError = true
                 }
-            } catch {
-                self.isLoading = false
-                self.hasError = true
             }
         }
     }

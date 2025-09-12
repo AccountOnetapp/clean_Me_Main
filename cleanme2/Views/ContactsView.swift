@@ -915,7 +915,7 @@ struct IncompleteContactsView: View {
         let contacts = searchText.isEmpty ? incompleteContacts : incompleteContacts.filter { contact in
             let fullName = "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces)
             let phoneNumbers = contact.phoneNumbers.map { $0.value.stringValue }.joined(separator: " ")
-            let emails = contact.emailAddresses.map { $0.value as? String ?? "" }.joined(separator: " ")
+            let emails = contact.emailAddresses.map { $0.value as String }.joined(separator: " ")
             let company = contact.organizationName
             
             let searchQuery = searchText.lowercased()

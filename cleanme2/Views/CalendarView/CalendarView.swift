@@ -559,8 +559,8 @@ struct CalendarView: View {
                 
                 if let systemEvent = matchingEvent {
                     print("✅ [CalendarView] Найдено соответствие! Добавляем в whitelist: '\(systemEvent.title)'")
-                    let result = await calendarService.addToWhiteList(systemEvent)
-                    print("📝 [CalendarView] Результат добавления: \(result)")
+                    calendarService.addToWhiteList(systemEvent)
+                    print("📝 [CalendarView] Результат добавления")
                 } else {
                     print("❌ [CalendarView] Не найдено системное событие для: '\(event.title)'")
                     print("📊 [CalendarView] Первые 3 системных события:")
@@ -587,7 +587,7 @@ struct CalendarView: View {
                     $0.eventIdentifier == event.originalEventIdentifier && 
                     Calendar.current.isDate($0.startDate, inSameDayAs: event.date)
                 }) {
-                    _ = await calendarService.removeFromWhiteList(systemEvent)
+                    calendarService.removeFromWhiteList(systemEvent)
                 }
             }
             

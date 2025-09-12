@@ -490,12 +490,13 @@ class SafeContactsViewModel: ObservableObject, ContactViewModelProtocol {
     // MARK: - CRUD Operations
     func loadContacts() {
         isLoading = true
-        DispatchQueue.global(qos: .userInitiated).async {
+        
+        Task(priority: .userInitiated) {
             let loadedContacts = self.persistenceManager.loadContacts()
-            DispatchQueue.main.async {
-                self.contacts = loadedContacts
-                self.isLoading = false
-            }
+            
+            // Автоматически переключает на MainActor
+            self.contacts = loadedContacts
+            self.isLoading = false
         }
     }
     

@@ -97,44 +97,44 @@ struct CalendarInstructionsView: View {
             VStack(spacing: 8) {
                 // 9 AM
                 timeSlotView(time: "9 AM", events: [
-                    CalendarEventMock(title: "***Special gift just 🎁 you***", color: .pink, isSpam: true)
+                    CalendarEventModel(title: "***Special gift just 🎁 you***", color: .pink, isSpam: true)
                 ])
                 
                 timeSlotView(time: "9:41 AM", events: [
-                    CalendarEventMock(title: "Marketing team meeting", color: .yellow, isSpam: false)
+                    CalendarEventModel(title: "Marketing team meeting", color: .yellow, isSpam: false)
                 ])
                 
                 // 10 AM
                 timeSlotView(time: "10 AM", events: [
-                    CalendarEventMock(title: "***Special gift just 🎁 you***", color: .pink, isSpam: true)
+                    CalendarEventModel(title: "***Special gift just 🎁 you***", color: .pink, isSpam: true)
                 ])
                 
                 // 11 AM
                 timeSlotView(time: "11 AM", events: [
-                    CalendarEventMock(title: "Team scavenger hunt (virtual)", color: .yellow, isSpam: false),
-                    CalendarEventMock(title: "Hurry Up & Get Money Back 😃", color: .pink, isSpam: true)
+                    CalendarEventModel(title: "Team scavenger hunt (virtual)", color: .yellow, isSpam: false),
+                    CalendarEventModel(title: "Hurry Up & Get Money Back 😃", color: .pink, isSpam: true)
                 ])
                 
                 // Noon
                 timeSlotView(time: "Noon", events: [
-                    CalendarEventMock(title: "Lunch with Erny", color: .blue, isSpam: false),
-                    CalendarEventMock(title: "Hurry Up & Get Money Back 😃", color: .pink, isSpam: true)
+                    CalendarEventModel(title: "Lunch with Erny", color: .blue, isSpam: false),
+                    CalendarEventModel(title: "Hurry Up & Get Money Back 😃", color: .pink, isSpam: true)
                 ])
                 
                 // 1 PM
                 timeSlotView(time: "1 PM", events: [
-                    CalendarEventMock(title: "🛍️ Discounted deals now 🛍️", color: .pink, isSpam: true)
+                    CalendarEventModel(title: "🛍️ Discounted deals now 🛍️", color: .pink, isSpam: true)
                 ])
                 
                 // 2 PM
                 timeSlotView(time: "2 PM", events: [
-                    CalendarEventMock(title: "***Special gift just 🎁 you***", color: .pink, isSpam: true)
+                    CalendarEventModel(title: "***Special gift just 🎁 you***", color: .pink, isSpam: true)
                 ])
                 
                 // 3 PM
                 timeSlotView(time: "3 PM", events: [
-                    CalendarEventMock(title: "Video brainstorming session", color: .yellow, isSpam: false),
-                    CalendarEventMock(title: "Hurry Up & Get Money Back 😃", color: .pink, isSpam: true)
+                    CalendarEventModel(title: "Video brainstorming session", color: .yellow, isSpam: false),
+                    CalendarEventModel(title: "Hurry Up & Get Money Back 😃", color: .pink, isSpam: true)
                 ])
             }
             .padding(.horizontal, 16)
@@ -142,7 +142,7 @@ struct CalendarInstructionsView: View {
         }
     }
     
-    private func timeSlotView(time: String, events: [CalendarEventMock]) -> some View {
+    private func timeSlotView(time: String, events: [CalendarEventModel]) -> some View {
         HStack(alignment: .top, spacing: 12) {
             // Time label
             Text(time)
@@ -254,14 +254,6 @@ struct CalendarInstructionsView: View {
     private func showOtherSolutions() {
         showingOtherSolutions = true
     }
-}
-
-// MARK: - Supporting Models
-
-struct CalendarEventMock {
-    let title: String
-    let color: Color
-    let isSpam: Bool
 }
 
 // MARK: - Preview

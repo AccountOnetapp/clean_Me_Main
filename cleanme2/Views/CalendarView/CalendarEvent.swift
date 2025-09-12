@@ -51,28 +51,6 @@ struct CalendarEvent: Identifiable, Hashable {
     }
 }
 
-let sampleEvents = [
-    CalendarEvent(title: "Free webinar on home dentistry.", source: "mail@mail.ru", date: createDate(year: 2024, month: 5, day: 15)),
-    CalendarEvent(title: "Birthday of Konstantin", source: "mail@mail.ru", date: createDate(year: 2024, month: 6, day: 20)),
-    CalendarEvent(title: "Development Daily Meet", source: "Calendar", date: createDate(year: 2024, month: 7, day: 5)),
-    CalendarEvent(title: "Free webinar on home dentistry.", source: "mail@mail.ru", date: createDate(year: 2024, month: 8, day: 10)),
-    CalendarEvent(title: "Birthday of Konstantin", source: "mail@mail.ru", date: createDate(year: 2025, month: 1, day: 25)),
-    CalendarEvent(title: "Development Daily Meet", source: "Calendar", date: createDate(year: 2025, month: 3, day: 1)),
-    CalendarEvent(title: "Team Sync-up", source: "Calendar", date: createDate(year: 2024, month: 9, day: 1)),
-    CalendarEvent(title: "Project Review", source: "mail@mail.ru", date: createDate(year: 2025, month: 2, day: 15)),
-    CalendarEvent(title: "Spam Event 1", source: "spam@example.com", date: createDate(year: 2024, month: 11, day: 2)),
-    CalendarEvent(title: "Spam Event 2", source: "spam@example.com", date: createDate(year: 2025, month: 4, day: 10))
-]
-
-// Helper function to create a Date from components
-func createDate(year: Int, month: Int, day: Int) -> Date {
-    var components = DateComponents()
-    components.year = year
-    components.month = month
-    components.day = day
-    return Calendar.current.date(from: components) ?? Date()
-}
-
 // MARK: - Preview
 #Preview {
     CalendarView()

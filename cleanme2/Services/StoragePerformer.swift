@@ -310,7 +310,7 @@ final class StoragePerformerImpl: StoragePerformer {
                     fetchRequest.fetchLimit = 1
                     
                     let objects = try context.fetch(fetchRequest)
-                    if let found = objects.first {
+                    if objects.first != nil {
                         print("✅ [StoragePerformer] Found object of type \(entityName) with id: \(id)")
                     } else {
                         print("🔍 [StoragePerformer] No object found of type \(entityName) with id: \(id)")
