@@ -7,7 +7,8 @@ import SwiftUI
 
 enum SubscriptionPlan {
     case weekly
-    case monthly // пока такого план нет!
+    case monthly3
+    case yearly
 }
 
 // MARK: - PaywallView

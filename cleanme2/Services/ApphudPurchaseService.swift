@@ -6,8 +6,9 @@ import Combine
 
 /// Defines the supported subscription product types.
 enum PurchaseServiceProduct: String, CaseIterable {
-    case week = "test.cleanme.week" // TODO: use real
-    case month = "" // Not used in this release
+    case week = "week_499_3dtrial"
+    case month3 = "3months_999_notrial"
+    case year = "year_8999_notrial"
 }
 
 /// Defines the outcome of a purchase or restore operation.
@@ -111,7 +112,7 @@ final class ApphudPurchaseService {
     func localizedPrice(for product: PurchaseServiceProduct) -> String? {
         guard let skProduct = getSKProduct(for: product) else {
             // Fallback for when Apphud products are not available
-            return product == .month ? "$18.99" : "$6.99"
+            return "$1.99" // Updated fallback price
         }
         return skProduct.localizedPrice
     }
@@ -124,14 +125,24 @@ final class ApphudPurchaseService {
 
     /// Calculates and returns the per-day price string.
     func perDayPrice(for product: PurchaseServiceProduct) -> String {
-        let defaultPerDayPrice = "$1.28"
+        let defaultPerDayPrice = "$0.71" // Updated fallback per-day price
         
         guard let priceValue = price(for: product),
               let currencySymbol = currency(for: product) else {
             return defaultPerDayPrice
         }
         
-        let perDay = product == .week ? priceValue / 7 : priceValue / 30
+        var days: Double
+        switch product {
+        case .week:
+            days = 7.0
+        case .month3:
+            days = 90.0 // Assuming 90 days for 3 months
+        case .year:
+            days = 365.0
+        }
+        
+        let perDay = priceValue / days
         
         // Formats the string with 2 decimal places
         return String(format: "%.2f%@", perDay, currencySymbol)
@@ -140,11 +151,19 @@ final class ApphudPurchaseService {
     // MARK: - Private Methods
 
     private func getProductId(for plan: SubscriptionPlan) -> String? {
+        // This function now needs to be adapted to the new `PurchaseServiceProduct` enum.
+        // The `SubscriptionPlan` enum is no longer sufficient to map all products.
+        // You will need to update the call site to pass in `PurchaseServiceProduct` directly.
+        // Assuming there is a way to map old plans to new products:
         switch plan {
-        case .monthly:
-            return PurchaseServiceProduct.month.rawValue
         case .weekly:
             return PurchaseServiceProduct.week.rawValue
+        case .monthly3:
+            // This mapping is now ambiguous. Please update the `SubscriptionPlan` or the calling code.
+            // For now, let's assume it's for 3-month plan.
+            return PurchaseServiceProduct.month3.rawValue
+        case .yearly:
+            return PurchaseServiceProduct.year.rawValue
         }
     }
 
@@ -188,7 +207,7 @@ final class ApphudPurchaseService {
     }
     
     /// Asynchronously fetches Apphud products from the paywalls.
-    private func fetchProducts() async {
+    func fetchProducts() async {
         let placements = await Apphud.placements(maxAttempts: 3)
         guard let paywall = placements.first?.paywall, !paywall.products.isEmpty else {
             print("Apphud: No products found on paywall.")
@@ -197,5 +216,6 @@ final class ApphudPurchaseService {
         
         self.availableProducts = paywall.products
         print("Apphud: Fetched products with IDs: \(self.availableProducts.map { $0.productId })")
+        print()
     }
 }

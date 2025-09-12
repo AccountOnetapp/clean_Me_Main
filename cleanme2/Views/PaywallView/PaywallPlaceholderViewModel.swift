@@ -12,9 +12,12 @@ final class PaywallViewModel: ObservableObject {
     // MARK: - Published Properties
     
     @Published var weekPrice: String = "N/A"
-    @Published var monthPrice: String = "N/A"
+    @Published var month3Price: String = "N/A" // NEW
+    @Published var yearPrice: String = "N/A" // NEW
+    
     @Published var weekPricePerDay: String = "N/A"
-    @Published var monthPricePerDay: String = "N/A"
+    @Published var month3PricePerDay: String = "N/A" // NEW
+    @Published var yearPricePerDay: String = "N/A" // NEW
     
     // MARK: - Initialization
     
@@ -82,9 +85,12 @@ final class PaywallViewModel: ObservableObject {
         
         await MainActor.run {
             self.weekPrice = purchaseService.localizedPrice(for: .week) ?? "N/A"
-            self.monthPrice = purchaseService.localizedPrice(for: .month) ?? "N/A"
+            self.month3Price = purchaseService.localizedPrice(for: .month3) ?? "N/A" // NEW
+            self.yearPrice = purchaseService.localizedPrice(for: .year) ?? "N/A" // NEW
+            
             self.weekPricePerDay = purchaseService.perDayPrice(for: .week)
-            self.monthPricePerDay = purchaseService.perDayPrice(for: .month)
+            self.month3PricePerDay = purchaseService.perDayPrice(for: .month3) // NEW
+            self.yearPricePerDay = purchaseService.perDayPrice(for: .year) // NEW
         }
     }
     
