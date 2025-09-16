@@ -16,6 +16,13 @@ struct SafeStorageView: View {
     @State private var showVideosView: Bool = false
     @State private var showContactsView: Bool = false
     @State private var showDocumentsView: Bool = false
+    @Binding var isPaywallPresented: Bool
+
+    private let purchaseService = ApphudPurchaseService()
+
+    var hasActiveSubscription: Bool {
+        purchaseService.hasActiveSubscription
+    }
     
     // Dynamic categories based on storage counts
     private var categories: [SafeStorageCategory] {
@@ -121,9 +128,13 @@ struct SafeStorageView: View {
         .background(CMColor.background.ignoresSafeArea())
         .contentShape(Rectangle())
         .onTapGesture {
-            // Dismiss keyboard when tapping outside
-            isSearchFocused = false
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            if !hasActiveSubscription {
+                isPaywallPresented = true
+            } else {
+                // Dismiss keyboard when tapping outside
+                isSearchFocused = false
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .fullScreenCover(isPresented: $showPhotosView) {
@@ -175,7 +186,11 @@ struct SafeStorageView: View {
                 
                 if isSearchFocused && !searchText.isEmpty {
                     Button(action: {
-                        searchText = ""
+                        if !hasActiveSubscription {
+                            isPaywallPresented = true
+                        } else {
+                            searchText = ""
+                        }
                     }) {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(CMColor.secondaryText)
@@ -208,14 +223,18 @@ struct SafeStorageView: View {
             ForEach(categories) { category in
                 categoryCard(category: category, scalingFactor: scalingFactor)
                     .onTapGesture {
-                        if category.title == "Docs" {
-                            showDocumentsView = true
-                        } else if category.title == "Photos" {
-                            showPhotosView = true
-                        } else if category.title == "Video" {
-                            showVideosView = true
-                        } else if category.title == "Contacts" {
-                            showContactsView = true
+                        if !hasActiveSubscription {
+                            isPaywallPresented = true
+                        } else {
+                            if category.title == "Docs" {
+                                showDocumentsView = true
+                            } else if category.title == "Photos" {
+                                showPhotosView = true
+                            } else if category.title == "Video" {
+                                showVideosView = true
+                            } else if category.title == "Contacts" {
+                                showContactsView = true
+                            }
                         }
                     }
             }
@@ -355,9 +374,4 @@ struct SafeStorageFile: Identifiable {
     let id = UUID()
     let name: String
     let icon: String
-}
-
-// MARK: - Preview
-#Preview {
-    SafeStorageView()
 }

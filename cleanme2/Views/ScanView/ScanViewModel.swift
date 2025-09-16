@@ -52,6 +52,12 @@ final class ScanViewModel: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
 
+    private let purchaseService = ApphudPurchaseService()
+
+    var hasActiveSubscription: Bool {
+        purchaseService.hasActiveSubscription
+    }
+    
     init() {
         print("SCAN:TEST - ScanViewModel init started")
         self.contactsViewModel = ContactsViewModel()

@@ -163,7 +163,11 @@ struct SmartCleanView: View {
             }
             
             Button(action: {
-                showSwipeOnboarding = true
+                if !viewModel.hasActiveSubscription {
+                    isPaywallPresented = true // Показываем пейволл
+                } else {
+                    showSwipeOnboarding = true // Запускаем функционал только при наличии подписки
+                }
             }) {
                 HStack {
                     Text("Enable swipe mode")
@@ -299,9 +303,13 @@ struct SmartCleanView: View {
             spacing: 16
         ) {
             Button {
-                let sections = viewModel.getSections(for: .image(.similar))
-                if !sections.isEmpty {
-                    presentedSwipeView = SwipeViewData(sections: sections, type: .similar)
+                if !viewModel.hasActiveSubscription {
+                    isPaywallPresented = true
+                } else {
+                    let sections = viewModel.getSections(for: .image(.similar))
+                    if !sections.isEmpty {
+                        presentedSwipeView = SwipeViewData(sections: sections, type: .similar)
+                    }
                 }
             } label: {
                 getItem(
@@ -315,9 +323,13 @@ struct SmartCleanView: View {
             .buttonStyle(.plain)
             
             Button {
-                let sections = viewModel.getSections(for: .image(.blurred))
-                if !sections.isEmpty {
-                    presentedSwipeView = SwipeViewData(sections: sections, type: .blurred)
+                if !viewModel.hasActiveSubscription {
+                    isPaywallPresented = true
+                } else {
+                    let sections = viewModel.getSections(for: .image(.blurred))
+                    if !sections.isEmpty {
+                        presentedSwipeView = SwipeViewData(sections: sections, type: .blurred)
+                    }
                 }
             } label: {
                 getItem(
@@ -331,9 +343,13 @@ struct SmartCleanView: View {
             .buttonStyle(.plain)
             
             Button {
-                let sections = viewModel.getSections(for: .image(.duplicates))
-                if !sections.isEmpty {
-                    presentedSwipeView = SwipeViewData(sections: sections, type: .duplicates)
+                if !viewModel.hasActiveSubscription {
+                    isPaywallPresented = true
+                } else {
+                    let sections = viewModel.getSections(for: .image(.duplicates))
+                    if !sections.isEmpty {
+                        presentedSwipeView = SwipeViewData(sections: sections, type: .duplicates)
+                    }
                 }
             } label: {
                 getItem(
@@ -347,9 +363,13 @@ struct SmartCleanView: View {
             .buttonStyle(.plain)
             
             Button {
-                let sections = viewModel.getSections(for: .image(.screenshots))
-                if !sections.isEmpty {
-                    presentedSwipeView = SwipeViewData(sections: sections, type: .screenshots)
+                if !viewModel.hasActiveSubscription {
+                    isPaywallPresented = true
+                } else {
+                    let sections = viewModel.getSections(for: .image(.screenshots))
+                    if !sections.isEmpty {
+                        presentedSwipeView = SwipeViewData(sections: sections, type: .screenshots)
+                    }
                 }
             } label: {
                 getItem(
@@ -479,6 +499,12 @@ class SmartCleanViewModel: ObservableObject {
     var swipeResultsSummary: String {
         let totalSavedInCache = getTotalSavedInCache()
         return "Saved: \(totalSavedInCache), Remove: \(totalSwipeDecisionsForDeletion)"
+    }
+    
+    private let purchaseService = ApphudPurchaseService()
+
+    var hasActiveSubscription: Bool {
+        purchaseService.hasActiveSubscription
     }
     
     private let mediaCleanerService: MediaCleanerService = MediaCleanerServiceImpl.shared

@@ -92,7 +92,7 @@ struct MediaCleanerView: View {
                 )
             } else {
                 // Safe folder content when authenticated
-                SafeStorageView()
+                SafeStorageView(isPaywallPresented: $isPaywallPresented)
             }
         }
         .onAppear {

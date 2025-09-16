@@ -69,7 +69,11 @@ struct ScanView: View {
 
                 HStack(spacing: 24 * scalingFactor) {
                     Button {
-                        handleContactsButtonTap()
+                        if !viewModel.hasActiveSubscription {
+                            isPaywallPresented = true
+                        } else {
+                            handleContactsButtonTap()
+                        }
                     } label: {
                         getItem(
                             for: .contacts, 
@@ -80,7 +84,11 @@ struct ScanView: View {
                         )
                     }
                     Button {
-                        handleCalendarButtonTap()
+                        if !viewModel.hasActiveSubscription {
+                            isPaywallPresented = true
+                        } else {
+                            handleCalendarButtonTap()
+                        }
                     } label: {
                         getItem(
                             for: .calendar, 
@@ -97,7 +105,11 @@ struct ScanView: View {
                 }
                 HStack(spacing: 24 * scalingFactor) {
                     Button {
-                        presentedView = .similarPhotos
+                        if !viewModel.hasActiveSubscription {
+                            isPaywallPresented = true
+                        } else {
+                            presentedView = .similarPhotos
+                        }
                     } label: {
                         getItem(
                             for: .similar,
@@ -109,7 +121,11 @@ struct ScanView: View {
                     }
 
                     Button {
-                        presentedView = .duplicates
+                        if !viewModel.hasActiveSubscription {
+                            isPaywallPresented = true
+                        } else {
+                            presentedView = .duplicates
+                        }
                     } label: {
                         getItem(
                             for: .duplicates,
@@ -122,7 +138,11 @@ struct ScanView: View {
                 }
                 HStack(spacing: 24 * scalingFactor) {
                     Button {
-                        presentedView = .blurryPhotos
+                        if !viewModel.hasActiveSubscription {
+                            isPaywallPresented = true
+                        } else {
+                            presentedView = .blurryPhotos
+                        }
                     } label: {
                         getItem(
                             for: .blurred,
@@ -134,7 +154,11 @@ struct ScanView: View {
                     }
 
                     Button {
-                        presentedView = .screenshots
+                        if !viewModel.hasActiveSubscription {
+                            isPaywallPresented = true
+                        } else {
+                            presentedView = .screenshots
+                        }
                     } label: {
                         getItem(
                             for: .screenshots,
@@ -147,7 +171,11 @@ struct ScanView: View {
                 }
                 HStack(spacing: 24 * scalingFactor) {
                     Button {
-                        presentedView = .videos
+                        if !viewModel.hasActiveSubscription {
+                            isPaywallPresented = true
+                        } else {
+                            presentedView = .videos
+                        }
                     } label: {
                         getItem(
                             for: .videos,
