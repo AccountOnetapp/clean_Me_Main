@@ -11,13 +11,13 @@ final class PaywallViewModel: ObservableObject {
 
     // MARK: - Published Properties
     
-    @Published var weekPrice: String = "N/A"
-    @Published var month3Price: String = "N/A" // NEW
-    @Published var yearPrice: String = "N/A" // NEW
+    @Published var weekPrice: String = " "
+    @Published var month3Price: String = " " // NEW
+    @Published var yearPrice: String = " " // NEW
     
-    @Published var weekPricePerDay: String = "N/A"
-    @Published var month3PricePerDay: String = "N/A" // NEW
-    @Published var yearPricePerDay: String = "N/A" // NEW
+    @Published var weekPricePerDay: String = " "
+    @Published var month3PricePerDay: String = " " // NEW
+    @Published var yearPricePerDay: String = " " // NEW
     
     // MARK: - Initialization
     
