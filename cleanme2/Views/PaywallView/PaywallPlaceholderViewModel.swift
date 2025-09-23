@@ -84,9 +84,9 @@ final class PaywallViewModel: ObservableObject {
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         
         await MainActor.run {
-            self.weekPrice = purchaseService.localizedPrice(for: .week) ?? "N/A"
-            self.month3Price = purchaseService.localizedPrice(for: .month3) ?? "N/A" // NEW
-            self.yearPrice = purchaseService.localizedPrice(for: .year) ?? "N/A" // NEW
+            self.weekPrice = purchaseService.localizedPrice(for: .week) ?? " "
+            self.month3Price = purchaseService.localizedPrice(for: .month3) ?? " " // NEW
+            self.yearPrice = purchaseService.localizedPrice(for: .year) ?? " " // NEW
             
             self.weekPricePerDay = purchaseService.perDayPrice(for: .week)
             self.month3PricePerDay = purchaseService.perDayPrice(for: .month3) // NEW

@@ -57,7 +57,7 @@ struct PaywallView: View {
                 .padding(.top, 20)
                 
                 // Текст с ценой и отменой
-                Text("Try 3 days free, after $6.99/week\nCancel anytime")
+                Text("Try 3 days free, after \(viewModel.weekPrice)/week\nCancel anytime")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(CMColor.primaryText)
                     .multilineTextAlignment(.center)

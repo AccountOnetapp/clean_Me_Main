@@ -31,13 +31,16 @@ enum PurchaseError: Error {
 public extension SKProduct {
     /// The localized price string for the product.
     var localizedPrice: String? {
-        return PriceFormatter.formatter.string(from: price)
-    }
+         let formatter = NumberFormatter()
+         formatter.numberStyle = .currency
+         formatter.locale = self.priceLocale
+         return formatter.string(from: self.price)
+     }
 
-    /// The currency symbol for the product.
-    var currency: String {
-        return PriceFormatter.formatter.currencySymbol
-    }
+     /// The currency symbol for the product.
+     var currency: String {
+         return self.priceLocale.currencySymbol ?? ""
+     }
 
     private struct PriceFormatter {
         static let formatter: NumberFormatter = {
