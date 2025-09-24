@@ -6,7 +6,7 @@ import Combine
 
 /// Defines the supported subscription product types.
 enum PurchaseServiceProduct: String, CaseIterable {
-    case week = "week_499_3dtrial"
+    case week = "week_499_3d_trial"
     case month3 = "3months_999_notrial"
     case year = "year_8999_notrial"
 }
