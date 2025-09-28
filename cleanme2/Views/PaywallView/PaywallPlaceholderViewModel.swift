@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import AppsFlyerLib
 
 // MARK: - PaywallViewModel: Handles the business logic for the paywall view
 final class PaywallViewModel: ObservableObject {
@@ -40,6 +41,14 @@ final class PaywallViewModel: ObservableObject {
             if case .failure(let error) = result {
                 print("Error during purchase: \(error?.localizedDescription ?? "Unknown error")")
                 return
+            }
+            
+            if case .success = result {
+                AppsFlyerLib.shared().logEvent("af_purchase", withValues: [
+                    AFEventParamRevenue: weekPrice,
+                    AFEventParamCurrency: purchaseService.currency,
+                    AFEventParamContentId: PurchaseServiceProduct.week.rawValue
+                ])
             }
             
             self.dismissPaywall()

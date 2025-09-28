@@ -2,14 +2,13 @@ import SwiftUI
 import AppsFlyerLib
 import AdSupport
 import ApphudSDK
-import AppTrackingTransparency // 1. Импортируем фреймворк ATT
+import AppTrackingTransparency
 
 @main
 struct cleanme2App: App {
     let persistenceController = PersistenceController.shared
     @StateObject private var safeStorageManager = SafeStorageManager()
     
-    // Инициализация Apphud и AppsFlyer
     init() {
         // --- Логика для AppsFlyer CUID ---
         let defaults = UserDefaults.standard
@@ -21,11 +20,10 @@ struct cleanme2App: App {
             uniqueUserID = UUID().uuidString
             defaults.set(uniqueUserID, forKey: customerUserIDKey)
         }
-        AppsFlyerLib.shared().customerUserID = uniqueUserID
+        //        AppsFlyerLib.shared().customerUserID = uniqueUserID
         AppsFlyerLib.shared().appleAppID = "id6751836390"
         AppsFlyerLib.shared().appsFlyerDevKey = "wtHLXJZ3Zoc82BcxrHmDdK"
-        AppsFlyerLib.shared().isDebug = true
-        // --- Конец логики для AppsFlyer CUID ---
+        AppsFlyerLib.shared().delegate = AppsFlyerDelegateHandler.shared
         
         // --- Логика для Apphud ---
         Apphud.start(apiKey: "app_jEb3hDLqfYmxG9hpwnJBFZUxn4hTeM")
@@ -39,22 +37,60 @@ struct cleanme2App: App {
                 .environmentObject(safeStorageManager)
                 .onAppear {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                        // 2. Запрашиваем ATT разрешение
                         ATTrackingManager.requestTrackingAuthorization { status in
-                            // 3. Код, который выполнится после того, как пользователь сделает выбор
-                            // Запускаем AppsFlyer и отправляем IDFA
                             let idfa = ASIdentifierManager.shared().advertisingIdentifier.uuidString
                             let finalIdfa = idfa == "00000000-0000-0000-0000-000000000000" ? nil : idfa
-                            
-                            // Apphud и AppsFlyer получают IDFA после разрешения
+
                             Apphud.setDeviceIdentifiers(idfa: finalIdfa, idfv: nil)
                             AppsFlyerLib.shared().start()
-                            
+
                             print("ATT Status: \(status.rawValue)")
                             print("IDFA after request: \(idfa)")
+                            
+                            let defaults = UserDefaults.standard
+                            let hasLaunchedKey = "hasLaunchedBefore"
+                            
+                            if !defaults.bool(forKey: hasLaunchedKey) {
+                                // Это первый запуск
+                                AppsFlyerLib.shared().logEvent("af_first_open", withValues: nil)
+                                defaults.set(true, forKey: hasLaunchedKey)
+                                print("First launch event sent")
+                            }
+                            
+                            // Всегда фиксируем обычный запуск
+                            AppsFlyerLib.shared().logEvent("af_app_launch", withValues: nil)
                         }
                     }
                 }
         }
+    }
+}
+
+// MARK: - AppsFlyer Delegate Wrapper
+class AppsFlyerDelegateHandler: NSObject, AppsFlyerLibDelegate {
+    static let shared = AppsFlyerDelegateHandler()
+    var conversionData: [AnyHashable: Any]?
+
+    func onConversionDataSuccess(_ data: [AnyHashable: Any]) {
+        conversionData = data
+        print("onConversionDataSuccess data:")
+        for (key, value) in data {
+            print(key, ":", value)
+        }
+        
+        Apphud.setAttribution(
+            data: ApphudAttributionData(rawData: data),
+            from: .appsFlyer,
+            identifer: AppsFlyerLib.shared().getAppsFlyerUID()
+        ) { _ in }
+    }
+
+    func onConversionDataFail(_ error: Error) {
+        print("[AFSDK] \(error.localizedDescription)")
+        Apphud.setAttribution(
+            data: ApphudAttributionData(rawData: ["error": error.localizedDescription]),
+            from: .appsFlyer,
+            identifer: AppsFlyerLib.shared().getAppsFlyerUID()
+        ) { _ in }
     }
 }
