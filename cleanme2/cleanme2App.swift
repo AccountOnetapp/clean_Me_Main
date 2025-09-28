@@ -20,7 +20,7 @@ struct cleanme2App: App {
             uniqueUserID = UUID().uuidString
             defaults.set(uniqueUserID, forKey: customerUserIDKey)
         }
-        //        AppsFlyerLib.shared().customerUserID = uniqueUserID
+        AppsFlyerLib.shared().customerUserID = uniqueUserID
         AppsFlyerLib.shared().appleAppID = "id6751836390"
         AppsFlyerLib.shared().appsFlyerDevKey = "wtHLXJZ3Zoc82BcxrHmDdK"
         AppsFlyerLib.shared().delegate = AppsFlyerDelegateHandler.shared
